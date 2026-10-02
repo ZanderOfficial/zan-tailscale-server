@@ -9,6 +9,9 @@
 }
 
 (tailnet_owner_only) {
+	log {
+		output stdout
+	}
 	@owner {
 		remote_ip {$TS_PROXY_IP}
 		header Tailscale-User-Login {$TS_ALLOWED_LOGIN}

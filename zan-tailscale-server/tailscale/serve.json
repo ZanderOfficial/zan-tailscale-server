@@ -9,11 +9,11 @@
   },
   "Web": {
     "${TS_CERT_DOMAIN}:443":  { "Handlers": { "/": { "Proxy": "http://open-webui:8080" } } },
-    "${TS_CERT_DOMAIN}:8443": { "Handlers": { "/": { "Proxy": "http://oh-gate:8443" } } },
-    "${TS_CERT_DOMAIN}:8000": { "Handlers": { "/": { "Proxy": "http://oh-gate:8000" } } },
-    "${TS_CERT_DOMAIN}:8001": { "Handlers": { "/": { "Proxy": "http://oh-gate:8001" } } },
-    "${TS_CERT_DOMAIN}:8011": { "Handlers": { "/": { "Proxy": "http://oh-gate:8011" } } },
-    "${TS_CERT_DOMAIN}:8012": { "Handlers": { "/": { "Proxy": "http://oh-gate:8012" } } }
+    "${TS_CERT_DOMAIN}:8443": { "Handlers": { "/": { "Proxy": "http://172.30.0.20:8443" } } },
+    "${TS_CERT_DOMAIN}:8000": { "Handlers": { "/": { "Proxy": "http://172.30.0.20:8000" } } },
+    "${TS_CERT_DOMAIN}:8001": { "Handlers": { "/": { "Proxy": "http://172.30.0.20:8001" } } },
+    "${TS_CERT_DOMAIN}:8011": { "Handlers": { "/": { "Proxy": "http://172.30.0.20:8011" } } },
+    "${TS_CERT_DOMAIN}:8012": { "Handlers": { "/": { "Proxy": "http://172.30.0.20:8012" } } }
   },
   "AllowFunnel": {
     "${TS_CERT_DOMAIN}:443": false,
