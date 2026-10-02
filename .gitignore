@@ -1,0 +1,20 @@
+# Secrets and runtime state: never commit
+**/.env
+!**/example.env
+**/backups/
+*.tgz
+
+# Model weights (re-pull from models.txt instead)
+*.gguf
+*.safetensors
+**/models/blobs/
+**/models/manifests/
+
+# Local-only tool settings
+.claude/settings.local.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/

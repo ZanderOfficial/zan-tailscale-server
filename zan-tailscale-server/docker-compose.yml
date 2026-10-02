@@ -1,0 +1,88 @@
+# Private self-hosted coding assistant: Ollama (GPU) + Open WebUI + Tailscale Serve.
+#
+# Exposure summary:
+#   ollama      -> NO host port. Reachable only by other containers on this compose network.
+#   open-webui  -> 127.0.0.1:${WEBUI_LOCAL_PORT} on the host only (for local admin / debugging).
+#   tailscale   -> Tailscale Serve publishes open-webui over HTTPS to YOUR tailnet only.
+#                  No Funnel, no router port forwarding, no public tunnel.
+#
+# The same file runs unchanged on native Ubuntu (Docker Engine + nvidia-container-toolkit).
+
+name: local-ai
+
+services:
+  ollama:
+    image: ollama/ollama:${OLLAMA_TAG:-latest}
+    container_name: ollama
+    restart: unless-stopped
+    volumes:
+      - ollama:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434            # inside the container network only; no host port is published
+      OLLAMA_CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH:-16384}
+      OLLAMA_FLASH_ATTENTION: "1"
+      OLLAMA_KV_CACHE_TYPE: ${OLLAMA_KV_CACHE_TYPE:-f16}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_PARALLEL: "1"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${OPEN_WEBUI_TAG:-main}
+    container_name: open-webui
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${WEBUI_LOCAL_PORT:-3000}:8080"   # loopback only
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      ENABLE_OPENAI_API: "False"
+      WEBUI_AUTH: "True"                    # never disable: this UI is reachable over the tailnet
+      ENABLE_SIGNUP: "False"                # first account (admin) can still be created on an empty DB
+      DEFAULT_USER_ROLE: pending            # belt and braces: any new account needs admin approval
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?run scripts/init-env.sh to create .env}
+      WEBUI_URL: ${WEBUI_URL:-}
+      CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN:-http://localhost:3000}
+      ENABLE_COMMUNITY_SHARING: "False"
+      SCARF_NO_ANALYTICS: "true"
+      DO_NOT_TRACK: "true"
+      ANONYMIZED_TELEMETRY: "false"
+
+  tailscale:
+    image: tailscale/tailscale:${TAILSCALE_TAG:-stable}
+    container_name: tailscale
+    hostname: ${TS_HOSTNAME:-ai-desktop}    # becomes https://<TS_HOSTNAME>.<tailnet>.ts.net
+    restart: unless-stopped
+    depends_on:
+      - open-webui
+    volumes:
+      - tailscale-state:/var/lib/tailscale  # node identity; login survives restarts
+      - ./tailscale:/config:ro
+    environment:
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "true"                  # no NET_ADMIN / tun device needed
+      TS_ACCEPT_DNS: "false"
+      TS_AUTH_ONCE: "true"
+      TS_SERVE_CONFIG: /config/serve.json
+      # No TS_AUTHKEY: first login is interactive (login URL printed in `docker logs tailscale`).
+
+volumes:
+  ollama:
+  open-webui:
+  tailscale-state:

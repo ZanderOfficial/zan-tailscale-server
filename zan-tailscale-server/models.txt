@@ -1,0 +1,6 @@
+# Models to install into the ollama container (one Ollama tag per line).
+# Apply with: ./scripts/pull-models.sh
+# Sizes are download sizes; VRAM figures measured on an RTX 4060 Ti 16 GB at 16K context.
+qwen2.5-coder:14b   # 9.0 GB, ~12.3 GB VRAM, 100% GPU. Default coding model.
+qwen3.5:9b          # 6.6 GB, ~7.8 GB VRAM, 100% GPU. General/reasoning ("thinking") model.
+qwen2.5-coder:7b    # 4.7 GB. Fast fallback coder.
