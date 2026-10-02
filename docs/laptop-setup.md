@@ -12,6 +12,11 @@ The laptop only runs a browser and Tailscale. The model runs on the desktop.
    ## https://ai-desktop.tailXXXXXX.ts.net
 
 4. Sign in with your Open WebUI account, pick a model (`qwen2.5-coder:14b` for code), and chat.
+5. **Also bookmark the repo agent (OpenHands):**
+
+   ## https://ai-desktop.tailXXXXXX.ts.net:8443
+
+   No separate login: access is tied to your Tailscale identity. First time: add a GitHub token under Settings → Integrations ([agent-harness.md](agent-harness.md)), then choose a repo and branch → Launch.
 
 ## Important
 

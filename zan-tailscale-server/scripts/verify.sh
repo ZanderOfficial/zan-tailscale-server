@@ -11,15 +11,25 @@ bad() { echo "  FAIL  $*"; fail=$((fail+1)); }
 
 echo "== Containers"
 docker compose ps --format 'table {{.Service}}\t{{.State}}\t{{.Health}}\t{{.Ports}}'
-for s in ollama open-webui tailscale; do
+for s in ollama open-webui openhands oh-gate tailscale; do
   [[ "$(docker inspect -f '{{.State.Running}}' "$s" 2>/dev/null)" == "true" ]] && ok "$s running" || bad "$s not running"
 done
 
 echo "== Exposure"
-if ss -ltnH | awk '{print $4}' | grep -qE ':11434$'; then bad "something listens on host port 11434"; else ok "Ollama API has no host port"; fi
-if ss -ltnH | awk '{print $4}' | grep -E ":${PORT}\$" | grep -vqE '^127\.0\.0\.1:'; then
-  bad "WebUI port ${PORT} bound to a non-loopback address"
-else ok "WebUI host port bound to 127.0.0.1 only"; fi
+ol=$(ss -ltnH | awk '{print $4}' | grep -E ':11434$' || true)
+if [[ -z "$ol" || "$ol" == "172.17.0.1:11434" ]]; then ok "Ollama API only on docker bridge (${ol:-none})"; else bad "Ollama listens on: $ol"; fi
+OHPORT="$(grep -E '^OPENHANDS_LOCAL_PORT=' .env 2>/dev/null | cut -d= -f2)"; OHPORT="${OHPORT:-3001}"
+for p in "$PORT" "$OHPORT"; do
+  if ss -ltnH | awk '{print $4}' | grep -E ":${p}\$" | grep -vqE '^127\.0\.0\.1:'; then
+    bad "host port ${p} bound to a non-loopback address"
+  else ok "host port ${p} bound to 127.0.0.1 only"; fi
+done
+
+echo "== OpenHands gate"
+code=$(docker exec open-webui curl -s -o /dev/null -w '%{http_code}' http://oh-gate:8443/ 2>/dev/null || echo err)
+[[ $code == 403 ]] && ok "oh-gate rejects requests without your Tailscale identity ($code)" || bad "oh-gate returned $code to an unauthenticated request"
+code=$(docker exec open-webui curl -s -o /dev/null -w '%{http_code}' -H "Tailscale-User-Login: $(grep -E '^TS_ALLOWED_LOGIN=' .env | cut -d= -f2)" http://oh-gate:8443/ 2>/dev/null || echo err)
+[[ $code == 403 ]] && ok "oh-gate rejects forged identity header from a non-tailscale container ($code)" || bad "oh-gate accepted a forged header ($code)"
 
 echo "== GPU"
 docker exec ollama nvidia-smi --query-gpu=name,memory.total --format=csv,noheader >/dev/null 2>&1 \

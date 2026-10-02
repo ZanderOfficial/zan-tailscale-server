@@ -1,12 +1,19 @@
-# Private self-hosted coding assistant: Ollama (GPU) + Open WebUI + Tailscale Serve.
+# Private self-hosted coding assistant: Ollama (GPU) + Open WebUI + OpenHands + Tailscale Serve.
 #
 # Exposure summary:
-#   ollama      -> NO host port. Reachable only by other containers on this compose network.
-#   open-webui  -> 127.0.0.1:${WEBUI_LOCAL_PORT} on the host only (for local admin / debugging).
-#   tailscale   -> Tailscale Serve publishes open-webui over HTTPS to YOUR tailnet only.
-#                  No Funnel, no router port forwarding, no public tunnel.
+#   ollama      -> 172.17.0.1:11434 only (Docker bridge on this host) so OpenHands sandboxes can reach
+#                  the model. Not reachable from the LAN, the tailnet, or Windows.
+#   open-webui  -> 127.0.0.1:${WEBUI_LOCAL_PORT} on the host only (local admin / debugging).
+#   openhands   -> 127.0.0.1:${OPENHANDS_LOCAL_PORT} on the host only.
+#   oh-gate     -> no host ports. Only accepts requests from the tailscale container that carry YOUR
+#                  Tailscale login (OpenHands has no auth of its own).
+#   tailscale   -> Tailscale Serve publishes, tailnet only (no Funnel):
+#                    :443  -> open-webui (chat)
+#                    :8443 -> oh-gate -> openhands (repo-based coding agent)
+#                    :8000/:8001/:8011/:8012 -> oh-gate -> the active OpenHands sandbox
 #
-# The same file runs unchanged on native Ubuntu (Docker Engine + nvidia-container-toolkit).
+# The same file runs on native Ubuntu (Docker Engine + nvidia-container-toolkit). On a machine with a LAN
+# interface, firewall ports 8000-8012 (sandboxes use host networking): see docs/architecture.md.
 
 name: local-ai
 
@@ -17,11 +24,13 @@ services:
     restart: unless-stopped
     volumes:
       - ollama:/root/.ollama
+    ports:
+      - "172.17.0.1:11434:11434"            # docker bridge only: for OpenHands sandboxes (host network)
     environment:
-      OLLAMA_HOST: 0.0.0.0:11434            # inside the container network only; no host port is published
-      OLLAMA_CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH:-16384}
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH:-32768}
       OLLAMA_FLASH_ATTENTION: "1"
-      OLLAMA_KV_CACHE_TYPE: ${OLLAMA_KV_CACHE_TYPE:-f16}
+      OLLAMA_KV_CACHE_TYPE: ${OLLAMA_KV_CACHE_TYPE:-q8_0}
       OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
       OLLAMA_MAX_LOADED_MODELS: "1"
       OLLAMA_NUM_PARALLEL: "1"
@@ -64,6 +73,46 @@ services:
       DO_NOT_TRACK: "true"
       ANONYMIZED_TELEMETRY: "false"
 
+  openhands:
+    image: docker.openhands.dev/openhands/openhands:${OPENHANDS_TAG:-1.8}
+    container_name: openhands
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${OPENHANDS_LOCAL_PORT:-3001}:3000"   # loopback only
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock       # creates sandbox containers (root-equivalent!)
+      - openhands-state:/.openhands                     # settings, GitHub token, conversations
+    environment:
+      AGENT_SERVER_IMAGE_REPOSITORY: ghcr.io/openhands/agent-server
+      AGENT_SERVER_IMAGE_TAG: ${OPENHANDS_AGENT_SERVER_TAG:-1.26.0-python}
+      AGENT_SERVER_USE_HOST_NETWORK: "true"             # fixed sandbox ports 8000/8001/8011/8012 (one sandbox at a time)
+      OH_SANDBOX_CONTAINER_URL_PATTERN: ${OPENHANDS_SANDBOX_URL_PATTERN:-http://localhost:{port}}
+      OH_WEB_URL: ${OPENHANDS_WEB_URL:-http://localhost:3001}
+      LOG_ALL_EVENTS: "true"
+
+  oh-gate:
+    image: caddy:${CADDY_TAG:-2}
+    container_name: oh-gate
+    restart: unless-stopped
+    depends_on:
+      - openhands
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    environment:
+      TS_ALLOWED_LOGIN: ${TS_ALLOWED_LOGIN:?set TS_ALLOWED_LOGIN (your Tailscale login) in .env}
+      TS_PROXY_IP: 172.30.0.10
+    networks:
+      default:
+      edge:
+        ipv4_address: 172.30.0.20
+
   tailscale:
     image: tailscale/tailscale:${TAILSCALE_TAG:-stable}
     container_name: tailscale
@@ -80,9 +129,21 @@ services:
       TS_ACCEPT_DNS: "false"
       TS_AUTH_ONCE: "true"
       TS_SERVE_CONFIG: /config/serve.json
-      # No TS_AUTHKEY: first login is interactive (login URL printed in `docker logs tailscale`).
+      # No TS_AUTHKEY: login with scripts/tailscale-login.sh (interactive, no time limit).
+    networks:
+      default:
+      edge:
+        ipv4_address: 172.30.0.10           # oh-gate only trusts requests from this address
+
+networks:
+  default:
+  edge:                                     # tailscale <-> oh-gate only, fixed addresses
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
 
 volumes:
   ollama:
   open-webui:
+  openhands-state:
   tailscale-state:

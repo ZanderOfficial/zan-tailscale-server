@@ -1,0 +1,41 @@
+# oh-gate: authentication in front of OpenHands (which has no login of its own).
+# A request is allowed only if it
+#   1) arrives from the tailscale container (fixed IP on the "edge" network), and
+#   2) carries the Tailscale-User-Login header Tailscale Serve sets for YOUR login.
+# Serve strips client-supplied Tailscale-* headers, so the header can't be forged from the tailnet.
+{
+	admin off
+	auto_https off
+}
+
+(tailnet_owner_only) {
+	@owner {
+		remote_ip {$TS_PROXY_IP}
+		header Tailscale-User-Login {$TS_ALLOWED_LOGIN}
+	}
+	handle @owner {
+		reverse_proxy {args[0]}
+	}
+	handle {
+		respond "Forbidden" 403
+	}
+}
+
+# OpenHands web app
+:8443 {
+	import tailnet_owner_only openhands:3000
+}
+
+# Active sandbox (host network): agent server, VS Code, app-preview workers
+:8000 {
+	import tailnet_owner_only 172.17.0.1:8000
+}
+:8001 {
+	import tailnet_owner_only 172.17.0.1:8001
+}
+:8011 {
+	import tailnet_owner_only 172.17.0.1:8011
+}
+:8012 {
+	import tailnet_owner_only 172.17.0.1:8012
+}

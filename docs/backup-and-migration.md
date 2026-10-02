@@ -7,6 +7,7 @@
 | Compose file, scripts, docs, model list | **This git repo** | GitHub |
 | `.env` (secret key, settings) | App folder on the server | `backup.sh` (`env.backup`) |
 | Users, chats, settings | `local-ai_open-webui` volume | `backup.sh` |
+| OpenHands settings, conversations, GitHub token | `local-ai_openhands-state` volume | `backup.sh` |
 | Tailscale device identity | `local-ai_tailscale-state` volume | `backup.sh` |
 | Models (~20 GB) | `local-ai_ollama` volume | Re-pull from `models.txt` (or `backup.sh --models`) |
 

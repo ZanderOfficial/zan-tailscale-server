@@ -12,6 +12,8 @@ Hardware: **RTX 4060 Ti 16 GB VRAM**, 16 GB system RAM. A model is only fast whe
 
 The list lives in [`zan-tailscale-server/models.txt`](../zan-tailscale-server/models.txt). Apply it with `./scripts/pull-models.sh`.
 
+OpenHands results per model: see [agent-harness.md](agent-harness.md#model-settings-measured-2026-10-02).
+
 ## Considered and not used (Sept 2026)
 
 | Model | Why not |
@@ -29,16 +31,16 @@ Set in `.env`, then apply with `docker compose up -d ollama`:
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `OLLAMA_CONTEXT_LENGTH` | `16384` | Tokens of context per request. Bigger means more VRAM. |
-| `OLLAMA_KV_CACHE_TYPE` | `f16` | `q8_0` halves KV-cache memory with a small quality cost. |
+| `OLLAMA_CONTEXT_LENGTH` | `32768` | Tokens of context per request. Bigger means more VRAM. |
+| `OLLAMA_KV_CACHE_TYPE` | `q8_0` | `q8_0` halves KV-cache memory with a small quality cost. |
 | `OLLAMA_KEEP_ALIVE` | `30m` | How long a model stays loaded after the last request. |
 
 For `qwen2.5-coder:14b`, the KV cache costs about 0.19 MB per token at f16:
 
 | Context | KV type | Approx. total VRAM | Fits? |
 |---|---|---|---|
-| 16K | f16 | ~12–13 GB | Yes (default) |
-| 32K | q8_0 | ~12–13 GB | Yes, for longer files |
+| 16K | f16 | ~12–13 GB | Yes (chat-only alternative) |
+| 32K | q8_0 | ~12 GB (measured) | **Yes (default; OpenHands needs ≥22K)** |
 | 32K | f16 | ~15.5 GB+ | Too tight |
 
 **Check the fit after any change:** `docker exec ollama ollama ps` must show `100% GPU`. If it shows a CPU/GPU split, reduce the context or switch the KV cache to `q8_0`.

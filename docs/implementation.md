@@ -26,6 +26,8 @@ How the current system was built (Sept 30 – Oct 1, 2026), the decisions made a
 10. **Tailscale.** Container in userspace mode. Login via `scripts/tailscale-login.sh`. Enabled HTTPS certificates in the tailnet. Serve now publishes `https://ai-desktop.tailXXXXXX.ts.net (tailnet only)`.
 11. **Open WebUI** given `WEBUI_URL` and `CORS_ALLOW_ORIGIN` for that address.
 12. **Models** added: `qwen3.5:9b` (100% GPU, about 7.8 GB). `qwen3.6:27b` was dropped because it doesn't fit.
+13. **Repo** created (`zan-tailscale-server`): docs at the root, app in `zan-tailscale-server/`.
+14. **Agent harness (OpenHands 1.8)** added: `openhands` plus the `oh-gate` identity proxy, Serve ports 8443 and 8000–8012, Ollama on the Docker bridge, context raised to 32K/q8_0. Smoke-tested clone/edit/git in a sandbox: `qwen2.5-coder:14b` with prompt-based tool calling finished in 59 s. Details in [agent-harness.md](agent-harness.md).
 
 ## Problems hit and fixes
 
@@ -37,6 +39,9 @@ How the current system was built (Sept 30 – Oct 1, 2026), the decisions made a
 | Tailscale login link "didn't work" | The container's startup gives `tailscale up` a 60-second deadline, then restarts with a **new** URL | `scripts/tailscale-login.sh` runs a one-off login with no timeout on the same state volume. |
 | Serve showed "No serve config" after login | HTTPS certificates weren't enabled in the tailnet | Enabled in admin → DNS, restarted the container. |
 | PowerShell → `wsl bash -c` quoting broke repeatedly | Nested quoting and `$` expansion | Run Linux steps as script files instead. |
+| OpenHands browser → sandbox needs direct ports | OpenHands' design (random host ports per sandbox) | Host-network sandboxes (fixed 8000/8001/8011/8012) plus Serve ports through oh-gate. One sandbox at a time. |
+| OpenHands has no authentication | OSS build is single-user and unauthenticated | `oh-gate` (Caddy) checks the Tailscale identity header and the source IP. |
+| `qwen2.5-coder` "finished" without doing anything | It emits tool calls as JSON text instead of native tool calls | `native_tool_calling: false` (OpenHands parses prompt-based calls). |
 
 ## Verification status
 
@@ -48,5 +53,8 @@ How the current system was built (Sept 30 – Oct 1, 2026), the decisions made a
 | Ollama API not exposed; WebUI loopback only; LAN blocked | ✅ tested |
 | Tailscale Serve tailnet-only, Funnel off | ✅ tested (`serve status`) |
 | Boot task registered and running | ✅ tested (`Running`) |
-| **Laptop access via `https://ai-desktop.tailXXXXXX.ts.net`** | ⏳ to be confirmed from the laptop |
+| Laptop access via `https://ai-desktop.tailXXXXXX.ts.net` (sign-in) | ✅ tested by user from the laptop |
+| OpenHands sandbox: clone, edit, git with local model | ✅ tested locally (59 s) |
+| OpenHands gate: unauthenticated and forged requests get 403 | ✅ tested (`verify.sh`) |
+| **OpenHands from the laptop (`:8443`) + GitHub repo selection** | ⏳ user to test with a GitHub token |
 | **Full reboot with no sign-in** | ⏳ not yet tested. Reboot, wait about 2 minutes **without signing in**, then open the URL from the laptop. |
