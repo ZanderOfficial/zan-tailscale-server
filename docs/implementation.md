@@ -41,6 +41,7 @@ How the current system was built (Sept 30 – Oct 1, 2026), the decisions made a
 | PowerShell → `wsl bash -c` quoting broke repeatedly | Nested quoting and `$` expansion | Run Linux steps as script files instead. |
 | OpenHands browser → sandbox needs direct ports | OpenHands' design (random host ports per sandbox) | Host-network sandboxes (fixed 8000/8001/8011/8012) plus Serve ports through oh-gate. One sandbox at a time. |
 | OpenHands has no authentication | OSS build is single-user and unauthenticated | `oh-gate` (Caddy) checks the Tailscale identity header and the source IP. |
+| Laptop got "Forbidden" from oh-gate | Serve proxied to the hostname `oh-gate`, which resolved to the gate's *default*-network IP, so requests came from an untrusted source address | Serve now proxies to the gate's fixed `edge` IP (`172.30.0.20`); access logging enabled. Verified: app (8443) and sandbox (8000, incl. websocket) return 200/101 with your identity. |
 | `qwen2.5-coder` "finished" without doing anything | It emits tool calls as JSON text instead of native tool calls | `native_tool_calling: false` (OpenHands parses prompt-based calls). |
 
 ## Verification status
@@ -56,5 +57,6 @@ How the current system was built (Sept 30 – Oct 1, 2026), the decisions made a
 | Laptop access via `https://ai-desktop.tailXXXXXX.ts.net` (sign-in) | ✅ tested by user from the laptop |
 | OpenHands sandbox: clone, edit, git with local model | ✅ tested locally (59 s) |
 | OpenHands gate: unauthenticated and forged requests get 403 | ✅ tested (`verify.sh`) |
-| **OpenHands from the laptop (`:8443`) + GitHub repo selection** | ⏳ user to test with a GitHub token |
+| OpenHands from the laptop (`:8443`), sandbox connection | ✅ tested (gate log: 200/101 with identity) |
+| **GitHub repo selection + push/PR** | ⏳ user to test with a GitHub token |
 | **Full reboot with no sign-in** | ⏳ not yet tested. Reboot, wait about 2 minutes **without signing in**, then open the URL from the laptop. |

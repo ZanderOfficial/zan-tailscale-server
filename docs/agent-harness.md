@@ -14,6 +14,13 @@ You pick one of your GitHub repos and a branch. OpenHands starts a **fresh sandb
    It's stored in the `openhands-state` volume on the desktop. Never put it in this repo or in `.env`.
 3. Home screen → **Open Repository** → pick a repo and branch → **Launch**.
 
+## Branches
+
+- **Existing branch:** pick it in the branch dropdown under *Open Repository* before **Launch**.
+- **New branch:** ask in chat, e.g. "Create branch `feature/x` from `main`, switch to it, and never push to main." Then "commit and push the branch" or "open a PR into main". This needs token permissions Contents and Pull requests: read/write.
+- **Point and click:** use the VS Code tab inside the conversation (sandbox port 8001), Source Control panel.
+- One sandbox at a time: **push before launching another repo or branch**, or unpushed work in the old sandbox is lost.
+
 ## How it's wired
 
 ```
