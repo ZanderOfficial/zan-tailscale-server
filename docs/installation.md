@@ -66,11 +66,15 @@ On a headless Ubuntu server, tunnel the port from another machine with `ssh -L 3
 ./scripts/tailscale-login.sh      # prints a login URL with no time limit; approve it in your browser
 docker exec tailscale tailscale serve status    # should show https://<TS_HOSTNAME>.<tailnet>.ts.net (tailnet only)
 ```
-Then set the address in `.env`, and run `docker compose up -d open-webui`:
+Then set the addresses in `.env` and run `docker compose up -d`:
 ```
 WEBUI_URL=https://<TS_HOSTNAME>.<tailnet>.ts.net
 CORS_ALLOW_ORIGIN=https://<TS_HOSTNAME>.<tailnet>.ts.net;http://localhost:3000
+TS_ALLOWED_LOGIN=<your Tailscale login email>
+OPENHANDS_PUBLIC_URL=https://<TS_HOSTNAME>.<tailnet>.ts.net:8443
+OPENHANDS_SANDBOX_URL_PATTERN=https://<TS_HOSTNAME>.<tailnet>.ts.net:{port}
 ```
+**Native Ubuntu only:** add `127.0.0.1 host.docker.internal` to `/etc/hosts` once (WSL does this through `wsl-boot.sh`). OpenHands sandboxes need it.
 
 ## 6. Start at boot
 

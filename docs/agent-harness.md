@@ -33,6 +33,7 @@ Laptop ──https :8443──► tailscale (Serve) ──► oh-gate (Caddy) �
 - **The browser talks to the sandbox directly**, which is how OpenHands is built. So the sandbox ports are published too, and sandboxes use host networking to keep those ports fixed. Consequence: **one sandbox at a time**. Starting a new repo session replaces the previous sandbox; conversations are kept.
 - **oh-gate** is the authentication layer. OpenHands itself has no login. It only passes requests that (1) come from the `tailscale` container's fixed IP and (2) carry the `Tailscale-User-Login` header for **your** login, which Tailscale Serve sets and clients can't forge. `verify.sh` checks that unauthenticated and forged requests get a 403.
 - Ollama is published on the Docker bridge address only, so sandboxes can reach the model. It isn't reachable from the LAN, the tailnet or Windows.
+- **Sandbox → app callbacks** (OpenHands' built-in MCP tools, webhooks, git-token lookup) go to `http://localhost:3001` and `http://host.docker.internal:3001`. That's why `OH_WEB_URL` stays internal, and your ts.net address is only configured as the allowed browser origin (`OPENHANDS_PUBLIC_URL`). Host-network sandboxes copy the host's `/etc/hosts`, which needs `127.0.0.1 host.docker.internal`; `wsl-boot.sh` adds it at every boot.
 
 ## Model settings (measured 2026-10-02)
 
@@ -74,6 +75,7 @@ curl -s -X POST http://127.0.0.1:3001/api/v1/settings -H 'Content-Type: applicat
 
 | Symptom | Fix |
 |---|---|
+| "MCP Connection Failure" when a conversation starts | The sandbox can't call back into the app. Check `OH_WEB_URL` is `http://localhost:3001` (not the ts.net address) and that `/etc/hosts` in WSL/Ubuntu has `127.0.0.1 host.docker.internal`. Then remove old sandboxes and start a new conversation. |
 | "Forbidden" on :8443 | Tailscale isn't connected on the laptop, or `TS_ALLOWED_LOGIN` in `.env` doesn't match your Tailscale login. Check `docker logs oh-gate`. |
 | Conversation stuck "starting" / no terminal output | The sandbox ports aren't reachable. Check `docker exec tailscale tailscale serve status` lists 8000/8001/8011/8012, and that `OPENHANDS_SANDBOX_URL_PATTERN` matches your ts.net name. |
 | Agent replies with JSON/code but does nothing | The model is emitting tool calls as text. Set `native_tool_calling: false` (or switch model). |

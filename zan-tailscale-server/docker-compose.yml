@@ -92,7 +92,12 @@ services:
       AGENT_SERVER_IMAGE_TAG: ${OPENHANDS_AGENT_SERVER_TAG:-1.26.0-python}
       AGENT_SERVER_USE_HOST_NETWORK: "true"             # fixed sandbox ports 8000/8001/8011/8012 (one sandbox at a time)
       OH_SANDBOX_CONTAINER_URL_PATTERN: ${OPENHANDS_SANDBOX_URL_PATTERN:-http://localhost:{port}}
-      OH_WEB_URL: ${OPENHANDS_WEB_URL:-http://localhost:3001}
+      # Internal URL the *sandbox* uses to call back into the app (built-in MCP server, git tokens).
+      # Must be reachable from host-network sandboxes, so keep it on localhost, NOT the ts.net name.
+      OH_WEB_URL: http://localhost:${OPENHANDS_LOCAL_PORT:-3001}
+      SANDBOX_HOST_PORT: ${OPENHANDS_LOCAL_PORT:-3001}      # webhooks -> http://host.docker.internal:<this>
+      # Browser origin allowed to talk to the app and sandbox (your ts.net address when remote).
+      OH_PERMITTED_CORS_ORIGINS_0: ${OPENHANDS_PUBLIC_URL:-http://localhost:3001}
       LOG_ALL_EVENTS: "true"
 
   oh-gate:
