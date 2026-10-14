@@ -85,3 +85,7 @@ Run these from `zan-tailscale-server/` in Linux. On Windows, `windows\ai.ps1 <co
 ## Never commit
 
 `.env`, `backups/`, Tailscale state, Open WebUI data, OpenHands data (incl. your GitHub token), and model weights. `.gitignore` covers these. Docker volumes live outside the repo anyway.
+
+## License
+
+Licensed under the [Mozilla Public License 2.0](LICENSE). You can use and adapt this stack freely; if you distribute a modified version of one of these files, that file must stay under MPL-2.0. The third-party software it runs (Ollama, Open WebUI, OpenHands, Caddy, Tailscale, and the models) keeps its own licenses.
