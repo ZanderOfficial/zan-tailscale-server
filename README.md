@@ -15,7 +15,7 @@ Laptop / phone (Tailscale) ──HTTPS, tailnet only──► Tailscale Serve (c
 
 - **Models**: `qwen2.5-coder:14b` (default), `qwen3.5:9b`, `qwen2.5-coder:7b`. See [docs/models.md](docs/models.md).
 - **Runs on**: Docker Engine inside WSL2 Ubuntu on Windows 11 today; native Ubuntu later with no changes.
-- **Bookmarks**: chat at `https://ai-desktop.tailXXXXXX.ts.net`, repo agent at `https://ai-desktop.tailXXXXXX.ts.net:8443`.
+- **Bookmarks**: chat at `https://ai-desktop.tailXXXXXX.ts.net`, repo agent at `https://ai-desktop.tailXXXXXX.ts.net:8443`. Replace `tailXXXXXX` with your own tailnet name (shown in the Tailscale admin console under DNS) throughout these docs.
 - **Not exposed**: no router port forwarding, no Tailscale Funnel, no public tunnel. The Ollama API is bound to the Docker bridge only.
 
 ## Repo layout
